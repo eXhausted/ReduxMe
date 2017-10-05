@@ -7,15 +7,36 @@
 //
 
 import UIKit
+import Gwent_API
+
+struct Command {
+//    let file: StaticString
+//    let function: StaticString
+//    let line: Int
+    
+    let perform: () -> ()
+    
+    init(
+//        file: StaticString = #file,
+//         function: StaticString = #function,
+//         line: Int = #line,
+         _ perform: @escaping ()-> ()) {
+        self.perform = perform
+//        self.file = file
+//        self.function = function
+//        self.line = line
+    }
+}
 
 class AllCardsViewController: UIViewController {
     @IBOutlet var tableView: UITableView?
     struct Props {
         ///#1
         let cards: [String]
+        let onLastCardDisplay: Command?
     }
     
-    var props = Props(cards: []) {
+    var props = Props(cards: [], onLastCardDisplay: nil) {
         didSet { tableView?.reloadData() } // setNeedsLayout
     }
 }
@@ -39,5 +60,18 @@ extension AllCardsViewController: UITableViewDataSource {
         
         cell.textLabel?.text = props.cards[indexPath.row]
         return cell
+    }
+    
+    func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
+        print(props.cards.indices.last, indexPath.row)
+        guard props.cards.indices.last == indexPath.row else { return }
+        props.onLastCardDisplay?.perform()
+    }
+}
+
+extension AllCardsViewController {
+    static func select(from state: State) -> Props {
+        let names = state.loadedCardsState.loadedCards.map { $0.name }
+        return Props(cards: names, onLastCardDisplay: nil)
     }
 }
