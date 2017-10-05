@@ -8,18 +8,36 @@
 
 import UIKit
 
-class ViewController: UIViewController {
-
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        // Do any additional setup after loading the view, typically from a nib.
+class AllCardsViewController: UIViewController {
+    @IBOutlet var tableView: UITableView?
+    struct Props {
+        ///#1
+        let cards: [String]
     }
-
-    override func didReceiveMemoryWarning() {
-        super.didReceiveMemoryWarning()
-        // Dispose of any resources that can be recreated.
+    
+    var props = Props(cards: []) {
+        didSet { tableView?.reloadData() } // setNeedsLayout
     }
-
-
 }
 
+extension AllCardsViewController: UITableViewDelegate {}
+
+extension AllCardsViewController: UITableViewDataSource {
+    
+    func tableView(_ tableView: UITableView,
+                   numberOfRowsInSection section: Int) -> Int {
+        return props.cards.count
+    }
+    
+    func tableView(_ tableView: UITableView,
+                   cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        precondition(props.cards.indices.contains(indexPath.row), "Out of range")
+        
+        guard let cell = tableView.dequeueReusableCell(withIdentifier: "Cell") else {
+            fatalError("Can't get card cell from \(tableView)")
+        }
+        
+        cell.textLabel?.text = props.cards[indexPath.row]
+        return cell
+    }
+}
