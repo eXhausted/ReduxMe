@@ -34,10 +34,15 @@ class AllCardsViewController: UIViewController {
         ///#1
         let cards: [String]
         let onLastCardDisplay: Command?
+        let onDeinit: Command?
     }
     
-    var props = Props(cards: [], onLastCardDisplay: nil) {
+    var props = Props(cards: [], onLastCardDisplay: nil, onDeinit: nil) {
         didSet { tableView?.reloadData() } // setNeedsLayout
+    }
+    
+    deinit {
+        props.onDeinit?.perform()
     }
 }
 
@@ -70,8 +75,8 @@ extension AllCardsViewController: UITableViewDataSource {
 }
 
 extension AllCardsViewController {
-    static func select(from state: State) -> Props {
+    static func select(from state: State, onLastCardDisplay: Command?, onDeinit: Command?) -> Props {
         let names = state.loadedCardsState.loadedCards.map { $0.name }
-        return Props(cards: names, onLastCardDisplay: nil)
+        return Props(cards: names, onLastCardDisplay: onLastCardDisplay, onDeinit: onDeinit)
     }
 }

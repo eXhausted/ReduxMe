@@ -10,7 +10,7 @@ import UIKit
 import Gwent_API
 
 struct State {
-    static let initial = State(error: nil, loadedCardsState: LoadedCardsState(loadedCards: [], nextURL: nil))
+    static let initial = State(error: nil, loadedCardsState: LoadedCardsState(loadedCards: [], nextURL: nil, hasMore: true))
     let error: Error?
     let loadedCardsState: LoadedCardsState
 }
@@ -18,13 +18,15 @@ struct State {
 struct LoadedCardsState {
     let loadedCards: [GwentAPI.Response.CardLink]
     let nextURL: URL?
+    let hasMore: Bool
 }
 
 func loadedCardsReducer(state: LoadedCardsState, action: Action) -> LoadedCardsState {
     switch action {
     case let action as HandleNewCards:
         return LoadedCardsState(loadedCards: state.loadedCards + action.cards.results,
-                     nextURL: action.cards.next)
+                                nextURL: action.cards.next,
+                                hasMore: action.cards.hasMore)
     default:
         return state
     }
@@ -46,6 +48,8 @@ struct HandleNewCards: Action {
     let cards: GwentAPI.Response.Cards
 }
 
+struct HandleEndCards: Action {}
+
 struct HandleError: Action {
     let error: Error
 }
@@ -54,10 +58,10 @@ struct DismissError: Action {}
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
-
+    
     var window: UIWindow?
     var allCards: AllCardsViewController!
-
+    
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
         
         let storyboard = UIStoryboard(name: "Main", bundle: nil)
@@ -69,31 +73,34 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         window?.makeKeyAndVisible()
         
         let store = Store<State>(initialState: State.initial,
-                                      reducer: stateReducer)
+                                 reducer: stateReducer)
         
-        let _ = store.subscribe { state in
-            self.allCards.props = AllCardsViewController.select(from: state)
+        let command = Command {
+            store.dispatch(loadMoreCards)
         }
         
-        let _ = store.subscribe { state in
+        var id: Command? = nil
+        id = store.subscribe { state in
+            self.allCards.props = AllCardsViewController.select(from: state, onLastCardDisplay: command, onDeinit: id)
+        }
+        
+        let _ = store.subscribe { [weak self] state in
+            guard let error = state.error,
+                let strongSelf = self else { return }
+            let alert = UIAlertController(title: "Error",
+                                          message: error.localizedDescription,
+                                          preferredStyle: .alert)
             
+            alert.addAction(UIAlertAction(title: "OK",
+                                          style: .cancel,
+                                          handler: { _ in
+                                            store.dispatch(action: DismissError())
+            }))
+            
+            strongSelf.allCards.present(alert, animated: true)
         }
         
-        loadMoreCards(from: nil).onComplete(callback: store.dispatch)
-        
-//        loadMoreCards = Command {
-//            api.getCards(url: store.state.nextURL)
-//                .dispatch(on: .main)
-//                .onSuccess{ store.dispatch(action: HandleNewCards(cards: $0)) }
-//                .onError { [weak self] error in
-//                    guard let strongSelf = self else { return }
-//                    let alert = UIAlertController(title: "Can't receive card list", message: error.localizedDescription, preferredStyle: .alert)
-//                    alert.addAction(UIAlertAction(title: "ok :(", style: .cancel))
-//                    strongSelf.allCards.present(alert, animated: true)
-//            }
-//        }
-//
-//        loadMoreCards?.perform()
+        command.perform()
         
         return true
     }

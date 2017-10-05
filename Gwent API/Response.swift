@@ -57,12 +57,14 @@ extension GwentAPI {
             public let previous: URL?
             public let next: URL?
             public let results: [CardLink]
+            public let hasMore: Bool
             
             public init(count: Int, previous: URL?, next: URL?, results: [CardLink]) {
                 self.count = count
                 self.previous = previous
                 self.next = next
                 self.results = results
+                self.hasMore = next != nil
             }
         }
         

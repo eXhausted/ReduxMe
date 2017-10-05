@@ -23,15 +23,17 @@ func loadMoreCards(from url: URL?) -> Future<Action> {
 
 typealias Dispatch = (Action) -> ()
 typealias Get<State> = () -> State
-typealias ActionCreateor<State> = (Dispatch, Get<State>) -> ()
+typealias ActionCreateor<State> = (_ dispatch: @escaping Dispatch, _ getState: Get<State>) -> ()
 
 extension Store {
-    func dispatch(actionCreator: @escaping ActionCreateor<State>) {
+    func dispatch(_ actionCreator: @escaping ActionCreateor<State>) {
         actionCreator(dispatch, { return self.state })
     }
 }
 
 func loadMoreCards(dispatch: @escaping Dispatch, getState: Get<State>) {
+    let state = getState()
+    guard state.loadedCardsState.hasMore == true else { return }
     loadMoreCards(from: getState().loadedCardsState.nextURL)
         .onComplete(callback: dispatch)
 }
